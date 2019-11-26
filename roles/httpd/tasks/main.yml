@@ -44,12 +44,22 @@
     - master.ign
     - worker.ign
 
+- name: Download rhcos images
+  get_url:
+    url: "{{ ocp_mirror_path }}/{{item}}"
+    dest: /var/www/html/{{item}}
+  with_items:
+    - "{{rhcos_kernel}}"
+    - "{{rhcos_initrd}}"
+    - "{{rhcos_image}}"
+
 - name: Restore SELinux Contexts in Document Root
   shell: restorecon -R /var/www/html
 
 - name: Enable httpd port in firewall
   firewalld:
     port: "{{ httpd_port }}/tcp"
+    zone: "{{firewall_zone}}"
     state: enabled
     permanent: yes
     immediate: yes

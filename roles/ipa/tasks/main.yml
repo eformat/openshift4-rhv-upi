@@ -71,6 +71,7 @@
     ipa_host: "{{ ipa_hostname }}"
     ipa_user: "{{ ipa_username }}"
     ipa_pass: "{{ ipa_password }}"
+    validate_certs: no
     state: present
   with_items:
     - api
@@ -85,6 +86,7 @@
     ipa_host: "{{ ipa_hostname }}"
     ipa_user: "{{ ipa_username }}"
     ipa_pass: "{{ ipa_password }}"
+    validate_certs: no    
     state: present
 
 - name: Create etcd-x Records
@@ -96,6 +98,7 @@
     ipa_host: "{{ ipa_hostname }}"
     ipa_user: "{{ ipa_username }}"
     ipa_pass: "{{ ipa_password }}"
+    validate_certs: no
     state: present
   with_items:
     - "{{ groups[provision_group] }}"

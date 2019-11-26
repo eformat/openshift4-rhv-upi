@@ -1,0 +1,7 @@
+---
+dependencies:
+  - role: geerlingguy.nfs
+  - role: atosatto.minio
+    vars: 
+      - minio_server_addr: ":{{minio_server_port}}"
+  

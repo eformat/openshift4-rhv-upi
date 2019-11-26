@@ -6,6 +6,9 @@
     url: "https://{{ rhv_hostname }}/ovirt-engine/api"
     insecure: True
 
+# - debug: 
+#     var: hostvars[item]
+#   with_items: "{{ groups[provision_group] }}"
 
 - name: Create VMs
   ovirt_vm:
@@ -16,12 +19,19 @@
     cluster: "{{ rhv_cluster }}"
     type: server
     memory: "{{ hostvars[item].memory }}"
+    memory_guaranteed: "{{ hostvars[item].memory_guaranteed }}"
     cpu_sockets: "{{ hostvars[item].sockets }}"
     cpu_cores: "{{ hostvars[item].cores }}"
-    cd_iso: "{{ hostvars[item].iso }}"
+    ballooning_enabled: yes
+    #cd_iso: "{{ hostvars[item].iso }}"
     boot_devices:
       - hd
-      - cdrom
+      - network
+    placement_policy: user_migratable     
+    operating_system: rhel_8x64 
+    graphical_console:
+      protocol:
+        - vnc
   tags:
     - create_vms
   register: ovirt_vm_results
@@ -76,6 +86,8 @@
     interface: "{{ item.1.interface }}"
     storage_domain: "{{ item.1.storage_domain }}"
     activate: true
+    poll_interval: 5
+    sparse: yes
   tags:
     - disks
   with_subelements:

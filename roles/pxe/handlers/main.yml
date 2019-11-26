@@ -1,0 +1,6 @@
+---
+- name: restart xinetd
+  service:
+    name: "{{ tftp_service }}"
+    daemon-reload: true
+    state: restarted

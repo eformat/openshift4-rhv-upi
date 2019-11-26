@@ -27,15 +27,15 @@
     - "{{ groups[provision_group] }}"
   when: item is search("master")
 
-- name: Wait 30 Minutes for SSH on Master Nodes
-  wait_for:
-    host: "{{ hostvars[item].ip }}"
-    port: 22
-    sleep: 10
-    timeout: 1800
-  with_items:
-    - "{{ groups[provision_group] }}"
-  when: item is search("master")
+# - name: Wait 30 Minutes for SSH on Master Nodes
+#   wait_for:
+#     host: "{{ hostvars[item].ip }}"
+#     port: 22
+#     sleep: 10
+#     timeout: 1800
+#   with_items:
+#     - "{{ groups[provision_group] }}"
+#   when: item is search("master")
 
 - name: Startup (install) Worker Nodes
   ovirt_vm:
@@ -46,15 +46,15 @@
     - "{{ groups[provision_group] }}"
   when: item is search("worker")
 
-- name: Wait 30 Minutes for SSH on Worker Nodes
-  wait_for:
-    host: "{{ hostvars[item].ip }}"
-    port: 22
-    sleep: 10
-    timeout: 1800
-  with_items:
-    - "{{ groups[provision_group] }}"
-  when: item is search("worker")
+# - name: Wait 30 Minutes for SSH on Worker Nodes
+#   wait_for:
+#     host: "{{ hostvars[item].ip }}"
+#     port: 22
+#     sleep: 10
+#     timeout: 1800
+#   with_items:
+#     - "{{ groups[provision_group] }}"
+#   when: item is search("worker")
 
 - name: Revoke the SSO token
   ovirt_auth:

@@ -1,0 +1,39 @@
+---
+- name: Create installation directory
+  file:
+    state: directory
+    path: "{{ installation_directory }}"
+
+- name: Clean up directory
+  file:
+    state: absent
+    path: "{{ installation_directory}}/{{item}}"
+  with_items:
+    - .openshift_install.log
+    - .openshift_install_state.json
+    - bootstrap.ign
+    - master.ign
+    - worker.ign
+    - auth/kubeconfig
+    - auth/kubeadmin-password
+    
+- name: Generate install-config.yml
+  template:
+    src: install-config.yaml.j2
+    dest: "{{installation_directory}}/install-config.yaml"
+
+- name: Generate manifests files
+  command: openshift-install create manifests --dir="{{installation_directory}}"
+
+- name: Set mastersSchedulable to false
+  lineinfile:
+    path: "{{installation_directory}}/manifests/cluster-scheduler-02-config.yml"
+    regexp: '^  mastersSchedulable: true'
+    line: '  mastersSchedulable: false'
+
+- name: Create ignition files
+  command: openshift-install create ignition-configs --dir="{{installation_directory}}"
+    
+# - name: Deploy kube config
+#   copy:
+    

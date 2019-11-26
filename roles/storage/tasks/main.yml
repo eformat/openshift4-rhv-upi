@@ -1,0 +1,20 @@
+---
+# - name: Enable NFS in firewall
+#   firewalld:
+#     service: "{{ item }}"
+#     state: enabled
+#     zone: "{{firewall_zone}}"
+#     permanent: yes
+#     immediate: yes
+#   loop:
+#     - nfs
+#     - mountd
+#     - rpc-bind
+
+# - name: Enable minio in firewall
+#   firewalld:
+#     port: "{{ minio_server_port }}/tcp"
+#     state: enabled
+#     zone: "{{firewall_zone}}"
+#     permanent: yes
+#     immediate: yes

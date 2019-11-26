@@ -1,0 +1,59 @@
+---
+- name: Install packages
+  package:
+    name: "{{ item }}"
+    state: installed
+  with_items: "{{ tftp_packages }}"
+  
+- name: Ensure tftp root directory exists
+  file:
+    path: "{{ tftp_root_directory }}"
+    state: directory
+    owner: "{{ tftp_user }}"
+    group: "{{ tftp_group }}"
+    mode: "{{ tftp_mode }}"
+    setype: "{{ tftp_setype }}"
+  
+- name: enable tftpd in xinetd
+  template:
+    src: tftp.j2
+    dest: /etc/xinetd.d/tftp
+
+- name: Start tftp
+  systemd:
+    name: tftp
+    state: restarted
+    enabled: yes
+
+- name: Create directory for PXEboot related files
+  file:
+    path: "{{ pxeserver_path }}"
+    state: directory
+  
+- name: Create directory for PXE server configuration
+  file:
+    path: "{{ pxeserver_path }}/pxelinux.cfg"
+    state: directory
+  
+- name: Create default menu for BIOS based systems
+  template:
+    src: pxelinux.cfg.j2
+    dest: "{{ pxeserver_path }}/pxelinux.cfg/default"
+  
+- name: Copy pxelinux files
+  copy:
+    src: "/usr/share/syslinux/{{item}}"
+    dest: "{{ pxeserver_path }}"
+    remote_src: yes
+  with_items: "{{pxe_files}}"
+  
+- name: Enable tftp port in firewall
+  firewalld:
+    service: tftp
+    state: enabled
+    zone: "{{firewall_zone}}"
+    permanent: yes
+    immediate: yes
+
+
+  

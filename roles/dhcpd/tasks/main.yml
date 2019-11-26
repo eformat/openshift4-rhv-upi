@@ -16,5 +16,17 @@
 - name: Enable/Start dhcpd Service
   systemd:
     name: dhcpd
-    state: started
+    state: restarted
     enabled: yes
+
+- name: Enable dhcp port in firewall
+  firewalld:
+    service: "{{item}}"
+    state: enabled
+    zone: "{{firewall_zone}}"
+    permanent: yes
+    immediate: yes
+  with_items:
+    - dhcp
+    - proxy-dhcp
+  

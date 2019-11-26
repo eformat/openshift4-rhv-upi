@@ -1,0 +1,16 @@
+---
+
+tftp_setype: tftpdir_rw_t
+
+tftp_user: "root"
+tftp_group: "root"
+tftp_mode: "0755"
+
+tftp_root_directory: /var/lib/tftpboot
+tftp_packages: 
+  - tftp-server
+  - syslinux
+
+pxeserver_path: "{{ tftp_root_directory }}"
+pxe_files: pxelinux.0
+

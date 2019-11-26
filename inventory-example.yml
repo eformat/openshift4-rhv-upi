@@ -2,161 +2,219 @@
 all:
   vars:
     provision_group: pg
-    iso_name: rhcos-4.1.0-x86_64-installer-auto.iso
-    base_domain: rhv-upi.ocp.pwc.umbrella.local
-    dhcp_server_dns_servers: 172.16.10.11
-    dhcp_server_gateway: 172.16.10.254
+    base_domain: ocp.ltsai.com
+    rhcos_version: 4.2.0
+    rhcos_arch: x86_64
+    rhcos_kernel: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-installer-kernel"
+    rhcos_initrd: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-installer-initramfs.img"
+    rhcos_image: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-metal-bios.raw.gz"
+    ocp_mirror_path: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
+    dhcp_server_dns_servers: 192.168.0.212
+    dhcp_server_gateway: 192.168.100.1
     dhcp_server_subnet_mask: 255.255.255.0
-    dhcp_server_subnet: 172.16.10.0
-    load_balancer_ip: 172.16.10.114
-    installation_directory: /home/chris/upi/rhv-upi
+    dhcp_server_subnet: 192.168.100.0
+    dhcp_server_ntp_server: ntp.lab.ltsai.com
+    load_balancer_ip: 192.168.0.230
+    httpd_port: 8888
+    installation_directory: /root/rhv-upi
+    restricted_network: true
+    ocp_local_registry: ocp4-registry.ocp.ltsai.com:5000
+    ocp_local_repo: ocp4/openshift
+    ocp_cert: |-
+      -----BEGIN CERTIFICATE-----
+      MIIFozCCA4ugAwIBAgIJAN8FRWTZFY9bMA0GCSqGSIb3DQEBCwUAMGgxCzAJBgNV
+      BAYTAlNHMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAaBgNVBAoME0RlZmF1bHQg
+      Q29tcGFueSBMdGQxJDAiBgNVBAMMG29jcDQtcmVnaXN0cnkub2NwLmx0c2FpLmNv
+      bTAeFw0xOTExMTIwNjE3MjZaFw0yMDExMTEwNjE3MjZaMGgxCzAJBgNVBAYTAlNH
+      MRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAaBgNVBAoME0RlZmF1bHQgQ29tcGFu
+      eSBMdGQxJDAiBgNVBAMMG29jcDQtcmVnaXN0cnkub2NwLmx0c2FpLmNvbTCCAiIw
+      DQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAL4A3ki3OydvVWXY1lexBl+zz1or
+      BAJVkGF8zkCtNUsGpll2YA+PWqqieUe+GgMouCBbG+ssc5ufhcFu1xjYmpGiaDMi
+      6zoHeyk753PfV9cTDMyAsGaXvCyrZ2ET9o4NT/ZBHazbWWRY08Wjwq/HOJZu03qI
+      P9XjelhjKvfBn4+75va3latRmu3l1BhpvYKZGzlI+o3l78i6VydIGL3Tfo1epseR
+      R2YUgegib5yzgCQcqc4nop7v8pE8idfk7AHhKL+vVhmFDK5uxv5XfXNIpwVrkXI2
+      FKH8vF40ZNlS1n2TskVj4KjzwxfBQKclVG8gYQmYdw8zUJjsfgj77mGzpSaVuet0
+      oAl/p8exirTtDDISdZdpTTT8j+gl+ADPllM/zkdxC4lRL6/mZ6CS4+nVorO2s4fK
+      3K6olcj/6yI8SzFqjUCt8Okn4/rw1bGEubM/dd8cl87MfEJy1fg+cyaKKsvvYTWc
+      5Awzz4GSwFwvUXKIEzvOu9thtFCgfFpZf+1vuGyu9SI4wFMXjnL+uoaoAoWYMyJ2
+      gWzs1osI0c/Qxz5ubTB4KHr7/c/sgv8zGrbvt3Bxw1Xh/ShOoKnECOqGzJRlgDxD
+      i3/rCWnLPoWkUc0MekM5ugimxLEHq3c6iKo/o6uNRk159DesNTwhG85jJqkQyPNf
+      V4f5OWhTbK/fvJi9AgMBAAGjUDBOMB0GA1UdDgQWBBTMncYW3UwKJnwmMyEeHWuT
+      Vd3RujAfBgNVHSMEGDAWgBTMncYW3UwKJnwmMyEeHWuTVd3RujAMBgNVHRMEBTAD
+      AQH/MA0GCSqGSIb3DQEBCwUAA4ICAQCPipHs7itF41DW7CuK+3BHYIQQZ74rC3db
+      jOZT1VSGrtbSjqUYAwoFC+HO/aH5vAwlUH1Etpo3gVONeFM9lAmwVu2/Wzu8BWDQ
+      jhCNPDE4Vq1clJvrK3xMBRexWZ0VrYI56pn0JJbYWNNCmN7w5BNUb7ZdCqlkNKzb
+      04rZN9SFBSQFxiBPJ5++Qz0RTIv7BNfT2lmPrkr5l2dVPdxf0lAnnrp5PfB6cSlz
+      i+03p2qDeVejF3lE7mkvlwQYg7whO2FLuNpe0Y2XtyksETav+18MKoA9XPgjXZd9
+      UlVSm+aI8PN4bMnsBcRfoenUUpY2XbIVOTvtW32U0f+EOtMA/895AsjZcB/PVZ0L
+      tId7x7QhI+D1BLhzp57kldFBrBWn9WSYeyjC2tVDZSL10KmVk06PSWAlDbyEO6cA
+      ZB5VuzRpVaAtaGTOi2D6ZCunhBV9RB9bwZJuLUgPXzYjTtnMWu/tuPQpKln7pkVF
+      yWOIB1EVOXxRS0AOGsnFirnYs/658uZwy7XmB2aUzgI/Qc3shawPOTJt7XxrKYwA
+      3oBoPkMWJ39wAnkM8wTzP4NodSS+shwH3Y4N88mGfXbZV9NVQ94NkSF5V4lX70e+
+      253G4bRSkdLUNONnDuPbjxPAiTkte68KDw5AHKPevtkpTjLD3oUP9l5muHtcdQ0M
+      fSOG+UuzsA==
+      -----END CERTIFICATE-----
   children:
     webserver:
       hosts:
-        lb.rhv-upi.ocp.pwc.umbrella.local:
-          httpd_port: 8888
+        ocp4-bastion.ocp.ltsai.com
+      vars:
+        firewall_zone: internal
+      
+    # storage:
+    #   hosts:
+    #       ocp4-bastion.ocp.ltsai.com
+    #   vars:
+    #     firewall_zone: internal
+    #     nfs_exports: [ "/exports *(rw,sync,no_root_squash)" ]        
+    #     nfs_rpcbind_state: started
+    #     nfs_rpcbind_enabled: true
+    #     #minio_server_port: "9091"
+
     loadbalancer:
       hosts:
-        lb.rhv-upi.ocp.pwc.umbrella.local:
+        ocp4-bastion.ocp.ltsai.com
+      vars:
+        firewall_zone: public
     pg:
       hosts:
         bootstrap:
-          ip: 172.16.10.150
-          memory: 24GiB
+          ip: 192.168.100.150
+          memory: 4GiB
+          memory_guaranteed: 1GiB          
           sockets: 1
-          cores: 4
-          iso: "{{ iso_name }}"
+          cores: 2
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b02-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
             # mac_address: You can provide specific MAC address here
         master0:
           etcd_name: etcd-0
-          ip: 172.16.10.151
-          memory: 24GiB
+          ip: 192.168.100.151
+          memory: 7GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b02-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         master1:
           etcd_name: etcd-1
-          ip: 172.16.10.152
-          memory: 24GiB
+          ip: 192.168.100.152
+          memory: 7GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b05-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         master2:
           etcd_name: etcd-2
-          ip: 172.16.10.153
-          memory: 24GiB
+          ip: 192.168.100.153
+          memory: 7GiB
+          memory_guaranteed: 1GiB          
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b08-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         worker0:
-          ip: 172.16.10.154
-          memory: 24GiB
+          ip: 192.168.100.154
+          memory: 6GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b02-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         worker1:
-          ip: 172.16.10.155
-          memory: 24GiB
+          ip: 192.168.100.155
+          memory: 6GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b05-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         worker2:
-          ip: 172.16.10.156
-          memory: 24GiB
+          ip: 192.168.100.156
+          memory: 6GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b08-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio
         worker3:
-          ip: 172.16.10.157
-          memory: 24GiB
+          ip: 192.168.100.157
+          memory: 6GiB
+          memory_guaranteed: 1GiB
           sockets: 1
           cores: 4
-          iso: "{{ iso_name }}"
           disks:
           - name: os
             bootable: yes
-            size: 140GiB
+            size: 80GiB
             format: cow
             interface: virtio_scsi
-            storage_domain: nfs-vms
+            storage_domain: b02-data
           nics:
           - name: eth0
-            network: lab
+            network: private
             interface: virtio

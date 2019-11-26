@@ -25,6 +25,7 @@
   firewalld:
     port: "{{ item }}/tcp"
     state: enabled
+    zone: "{{firewall_zone}}"
     permanent: yes
     immediate: yes
   loop:
@@ -32,9 +33,10 @@
     - 443
     - 6443
     - 22623
+    - 5000
 
 - name: Enable/Start haproxy Service
   systemd:
     name: haproxy
-    state: started
+    state: restarted
     enabled: yes

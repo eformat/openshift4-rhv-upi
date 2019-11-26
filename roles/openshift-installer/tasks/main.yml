@@ -21,6 +21,10 @@
   template:
     src: install-config.yaml.j2
     dest: "{{installation_directory}}/install-config.yaml"
+  vars:
+    base_domain: "{{ dns_base_domain.split('.')[1:] | join('.') | lower }}"
+    cluster_name: "{{ dns_base_domain.split('.')[0] | lower }}"
+    num_of_masters: "{{ groups[provision_group] | select('search','master') | list | length }}"
 
 - name: Generate manifests files
   command: openshift-install create manifests --dir="{{installation_directory}}"

@@ -46,7 +46,7 @@
 
 - name: Download rhcos images
   get_url:
-    url: "{{ ocp_mirror_path }}/{{item}}"
+    url: "{{ rhcos_mirror_path }}/{{item}}"
     dest: /var/www/html/{{item}}
   with_items:
     - "{{rhcos_kernel}}"

@@ -1,18 +1,12 @@
-# Provisioning OpenShift 4.1 on RHV Using Baremetal UPI
+# Provisioning OpenShift 4.2 on RHV Using Baremetal UPI
 
-This repository contains a set of playbooks to help facilitate the deployment of OpenShift 4.1 on RHV.
+This repository contains a set of playbooks to help facilitate the deployment of OpenShift 4.2 on RHV.
 
-_NOTE: Updated to include 4.1 GA bits_
+_NOTE:_ This a forked repository from the original [sa-ne/openshift4-rhv-upi](https://github.com/sa-ne/openshift4-rhv-upi)
+
 
 ## Background
-
-The playbooks/scripts in this repository should help you automate the vast majority of an OpenShift 4.1 UPI deployment on RHV. Be sure to read the requirements section below. My initial installation of OCP 4.1 on RHV was a little cumbersome, so I opted to automate the majority of the installation to allow for iterative deployments.
-
-The biggest challenge was the installation of the Red Hat Enterprise Linux CoreOS (RHCOS) nodes themselves and that is the focal point of the automation. The playbooks/scripts provided are essentially an automated walk through of the standard baremetal UPI installation instructions but tailored for RHV.
-
-To automate the deployment of RHCOS, the standard boot ISO is modified so the installation automatically starts with specific kernel parameters. The parameters for each node type (bootstrap, masters and workers) are the same with the exception of  `coreos.inst.ignition_url`. To simplify the process, the boot ISO is made to reference a PHP script that offers up the correct ignition config based on the requesting hosts DNS name. This method allows the same boot ISO to be used for each node type.
-
-Before provisioning the RHCOS nodes a lot of prep work needs to be completed. This includes creating the proper DNS entries for the environment, configuring a DHCP server, configuring a load balancer and configuring a web server to store ignition configs and other installation artifacts. Ansible playbooks are provided to automate much of this process.
+The purpose of these playbooks is to help setup OpenShift 4 UPI on RHV. 
 
 ## Specific Automations
 
@@ -20,6 +14,7 @@ Before provisioning the RHCOS nodes a lot of prep work needs to be completed. Th
 * Creation of all SRV, A and PTR records in IdM
 * Deployment of httpd Server for Installation Artifacts and Logic
 * Deployment of HAProxy and Applicable Configuration
+* Configuring of PXE server
 * Deployment of dhcpd and Applicable Static IP Assignment
 * Ordered Starting (i.e. installation) of VMs
 
@@ -30,7 +25,11 @@ To leverage the automation in this guide you need to bring the following:
 * RHV Environment (tested on 4.3)
 * IdM Server with DNS Enabled
  * Must have Proper Forward/Reverse Zones Configured
-* RHEL 7 Server which will act as a Web Server, Load Balancer and DHCP Server
+* RHEL 7 Server which will act as a Bastion hosts, which is also a:
+  * Web Server
+  * Load Balancer
+  * DHCP Server
+  * PXE Server
  * Only Repository Requirement is `rhel-7-server-rpms`
 
 ### Naming Convention
@@ -50,36 +49,44 @@ All hostnames must follow the following format:
 
 # Installing
 
-Read through the [Installing on baremetal](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.1/html-single/installing/index#installing-bare-metal) installation documentation before proceeding.
+Read through the [Installing on baremetal](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.2/html-single/installing/index#installing-bare-metal) installation documentation before proceeding.
 
 ## Clone this Repository
 
 Find a good working directory and clone this repository using the following command:
 
 ```console
-$ git clone https://github.com/sa-ne/openshift4-rhv-upi.git
+$ git clone https://github.com/tsailiming/openshift4-rhv-upi.git
 ```
+You will need to install Ansible. This has been tested with Ansible 2.9.1.
 
 ## Create DNS Zones in IdM
 
-Login to your IdM server and make sure a reverse zone is configured for your subnet. My lab has a subnet of `172.16.10.0` so the corresponding reverse zone is called `10.16.172.in-addr.arpa.`. Make sure a forward zone is configured as well. It should be whatever is defined in the `base_domain` variable in your Ansible inventory file (`rhv-upi.ocp.pwc.umbrella.local` in this example).
+Login to your IdM server and make sure a reverse zone is configured for your subnet. My lab has a subnet of `192.168.100.0` so the corresponding reverse zone is called `100.168.192.in-addr.arpa.`. Make sure a forward zone is configured as well. It should be whatever is defined in the `base_domain` variable in your Ansible inventory file (`ocp.ltsai.com` in this example).
 
 ## Creating Inventory File for Ansible
 
 An example inventory file is included for Ansible (`inventory-example.yml`). Use this file as a baseline. Make sure to configure the appropriate number of master/worker nodes for your deployment.
 
-The following global variables will need to be modified (the default values are what I use in my lab, consider them examples):
-
 |Variable|Description|
 |:---|:---|
-|iso_name|The name of the custom ISO file in the RHV ISO domain|
-|base\_domain|The base DNS domain. Not to be confused with the base domain in the UPI instructions. Our base\_domain variable in this case is `<cluster_name>`.`<base_domain>`|
+|dns_base\_domain|The base DNS domain. Not to be confused with the base domain in the UPI instructions. Our base\_domain variable in this case is `<cluster_name>`.`<base_domain>`|
+|rhcos_version| RHEL CoreOS version |
+|rhcos_mirror_path | RHEL CoreOS mirror path | 
 |dhcp\_server\_dns\_servers|DNS server assigned by DHCP server|
 |dhcp\_server\_gateway|Gateway assigned by DHCP server|
 |dhcp\_server\_subnet\_mask|Subnet mask assigned by DHCP server|
 |dhcp\_server\_subnet|IP Subnet used to configure dhcpd.conf|
+|dhcp\_server\_ntp\_server | NTP server assigned by DHCP server|
 |load\_balancer\_ip|This IP address of your load balancer (the server that HAProxy will be installed on)|
+|httpd_port|Http server port to serve the ignition files | 
 |installation_directory|The directory that you will be using with `openshift-install` command for generating ignition files|
+| restricted_network | If you are installing OpenShift in a disconnected environment |
+| ocp_local_registry | Your local registry for a disconnected environment | 
+| ocp_local_repo | Your local repository |
+| ocp_cert | Your local registry certificate |
+
+Your pull secret can be obtained from the [OpenShift start page](https://cloud.redhat.com/openshift/install/metal/user-provisioned).
 
 For the individual node configuration, be sure to update the hosts in the `pg` hostgroup. Several parameters will need to be changed for _each_ host including `ip`, `storage_domain` and `network`. You can also specify `mac_address` for each of the VMs in its `network` section (if you don't, VMs will obtain their MAC address from cluster's MAC pool automatically). Match up your RHV environment with the inventory file.
 
@@ -97,13 +104,15 @@ The vault requires the following variables. Adjust the values to suit your envir
 
 ```yaml
 ---
-rhv_hostname: "rhevm.pwc.umbrella.local"
+rhv_hostname: "rhvm.example.com"
 rhv_username: "admin@internal"
 rhv_password: "changeme"
-rhv_cluster: "r710s"
-ipa_hostname: "idm1.umbrella.local"
+rhv_cluster: "Default"
+ipa_hostname: "idm.example.com"
 ipa_username: "admin"
 ipa_password: "changeme"
+ocp_pull_scecret: "pull secret from cloud.redhat.com as a string"
+ocp_ssh_key: "SSH public key"
 ```
 
 ## Download the OpenShift Installer
@@ -116,184 +125,16 @@ $ curl -o openshift-install-linux-4.1.0.tar.gz https://mirror.openshift.com/pub/
 
 Extract the archive and continue.
 
-## Creating Ignition Configs
+##  Ignition Configs
 
-After you download the installer we need to create our ignition configs using the `openshift-install` command. Create a file called `install-config.yaml` similar to the one show below. This example shows 3 masters and 4 worker nodes.
+This is auto generated by [openshift-installer](roles/openshift-installer) role.
 
-```yaml
-apiVersion: v1
-baseDomain: ocp.pwc.umbrella.local
-compute:
-- name: worker
-  replicas: 4
-controlPlane:
-  name: master
-  replicas: 3
-metadata:
-  name: rhv-upi
-networking:
-  clusterNetworks:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-platform:
-  none: {}
-pullSecret: '{ ... }'
-sshKey: 'ssh-rsa ... user@host'
-```
-
-You will need to modify baseDomain, pullSecret and sshKey (be sure to use your _public_ key) with the appropriate values. Next, copy `install-config.yaml` into your working directory (`/home/chris/upi/rhv-upi` in this example) and run the OpenShift installer as follows to generate your Ignition configs.
-
-Your pull secret can be obtained from the [OpenShift start page](https://cloud.redhat.com/openshift/install/metal/user-provisioned).
-
-```console
-$ ./openshift-install create ignition-configs --dir=/home/chris/upi/rhv-upi
-```
-
-## Staging Content
-
-Next we need the RHCOS image. These images are stored [here](https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.1/latest/). On our web server, download the RHCOS image (BIOS, not UEFI) to the document root (assuming `/var/www/html`).
-
-_NOTE: You may be wondering about SELinux contexts since httpd is not installed. Fear not, our playbooks will handle that during the installation phase._
-
-```console
-$ sudo mkdir -p /var/www/html
-```
-
-```console
-$ sudo curl -o /var/www/html/rhcos-4.1.0-x86_64-metal-bios.raw.gz https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.1/latest/rhcos-4.1.0-x86_64-metal-bios.raw.gz
-```
-
-Ignition files generated in the previous step will be copied to web server automatically as part of `httpd` role. If you intend to skip that role, copy bootstrap.ign, master.ign and worker.ign from your working directory to `/var/www/html` on your web server manually now.
-
-## Generating Boot ISOs
-
-We will use a bootable ISO to install RHCOS on our virtual machines. We need to pass several parameters to the kernel (see below). This can be cumbersome, so to speed things along we will generate a single boot ISO that can be used for bootstrap, master and worker nodes. During the installation, a playbook will install the PHP script on your web server. This script will serve up the appropriate ignition config based on the requesting servers DNS name.
-
-__Kernel Parameters__
-
-Note these parameters are for reference only. Specify the appropriate values for your environment in the `iso-generator.sh` and run the script to generate an ISO specific to your environment.
-
-* coreos.inst=yes
-* coreos.inst.install\_dev=sda
-* coreos.inst.image\_url=http://example.com/rhcos-410.8.20190418.1-metal-bios.raw.gz
-* coreos.inst.ignition\_url=http://example.com/ignition-downloader.php
-
-### Obtaining RHCOS Install ISO
-
-Next we need the RHCOS ISO installer (stored [here](https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.1/latest/)). Download the ISO file as shown. Be sure to check the directory for the latest version.
-
-```console
-$ curl -o /tmp/rhcos-4.1.0-x86_64-installer.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.1/latest/rhcos-4.1.0-x86_64-installer.iso
-```
-
-### Modifying the ISO
-
-A script is provided to recreate an ISO that will automatically boot with the appropriate kernel parameters. Locate the script and modify the variables at the top to suite your environment.
-
-Most parameters can be left alone. You WILL need to change at least the `KP_WEBSERVER` variable to point to the web server hosting your ignition configs and RHCOS image.
-
-```shell-script
-VERSION=4.1.0-x86_64
-ISO_SOURCE=/tmp/rhcos-$VERSION-installer.iso
-ISO_OUTPUT=/tmp/rhcos-$VERSION-installer-auto.iso
-
-DIRECTORY_MOUNT=/tmp/rhcos-$VERSION-installer
-DIRECTORY_WORKING=/tmp/rhcos-$VERSION-installer-auto
-
-KP_WEBSERVER=lb.rhv-upi.ocp.pwc.umbrella.local:8888
-KP_COREOS_IMAGE=rhcos-$VERSION-metal-bios.raw.gz
-KP_BLOCK_DEVICE=sda
-```
-
-Running the script (make sure to do this as root) should produce similar output:
-
-```console
-(rhv) 0 chris@umbrella.local@toaster:~ $ sudo ./iso-generator.sh 
-mount: /tmp/rhcos-4.1.0-x86_64-installer: WARNING: device write-protected, mounted read-only.
-sending incremental file list
-README.md
-EFI/
-EFI/fedora/
-EFI/fedora/grub.cfg
-images/
-images/efiboot.img
-images/initramfs.img
-images/vmlinuz
-isolinux/
-isolinux/boot.cat
-isolinux/boot.msg
-isolinux/isolinux.bin
-isolinux/isolinux.cfg
-isolinux/ldlinux.c32
-isolinux/libcom32.c32
-isolinux/libutil.c32
-isolinux/vesamenu.c32
-
-sent 75,912,546 bytes  received 295 bytes  151,825,682.00 bytes/sec
-total size is 75,893,080  speedup is 1.00
-Size of boot image is 4 sectors -> No emulation
- 13.43% done, estimate finish Tue Jun  4 20:28:18 2019
- 26.88% done, estimate finish Tue Jun  4 20:28:18 2019
- 40.28% done, estimate finish Tue Jun  4 20:28:18 2019
- 53.72% done, estimate finish Tue Jun  4 20:28:18 2019
- 67.12% done, estimate finish Tue Jun  4 20:28:18 2019
- 80.56% done, estimate finish Tue Jun  4 20:28:18 2019
- 93.96% done, estimate finish Tue Jun  4 20:28:18 2019
-Total translation table size: 2048
-Total rockridge attributes bytes: 2086
-Total directory bytes: 8192
-Path table size(bytes): 66
-Max brk space used 1c000
-37255 extents written (72 MB)
-```
-
-Copy the ISO to your ISO domain in RHV. After that you can cleanup the /tmp directory by doing `rm -rf /tmp/rhcos*`. Make sure to update the `iso_name` variable in your Ansible inventory file with the correct name (`rhcos-4.1.0-x86_64-installer-auto.iso` in this example).
-
-At this point we have completed the staging process and can let Ansible take over.
-
-## Deploying OpenShift 4.1 on RHV with Ansible
+## Deploying OpenShift 4.2 on RHV with Ansible
 
 To kick off the installation, simply run the provision.yml playbook as follows:
 
 ```console
-$ ansible-playbook -i inventory.yml --ask-vault-pass provision.yml
-```
-
-The order of operations for the `provision.yml` playbook is as follows:
-
-* Create DNS Entries in IdM
-* Create VMs in RHV
-	- Create VMs
-	- Create Disks
-	- Create NICs
-* Configure Load Balancer Host
-	- Install and Configure dhcpd
-	- Install and Configure HAProxy
-	- Install and Configure httpd
-* Boot VMs
-	- Start bootstrap VM and wait for SSH
-	- Start master VMs and wait for SSH
-	- Start worker VMs and wait for SSH
-	
-Once the playbook completes (should several minutes) continue with the instructions.
-
-### Skipping Portions of Automation
-
-If you already have your own DNS, DHCP or Load Balancer you can skip those portions of the automation by passing the appropriate `--skip-tags` argument to the `ansible-playbook` command.
-
-Each step of the automation is placed in its own role. Each is tagged ipa, dhcpd and haproxy. If you have your own DHCP configured, you can skip that portion as follows:
-
-```console
-$ ansible-playbook -i inventory.yml --ask-vault-pass --skip-tags dhcpd provision.yml
-```
-
-All three roles could be skipped using the following command:
-
-```console
-$ ansible-playbook -i inventory.yml --ask-vault-pass --skip-tags dhcpd,ipa,haproxy provision.yml
+$ ansible-playbook -u root -i inventory.yml --ask-vault-pass provision.yml
 ```
 
 ## Finishing the Deployment
@@ -303,25 +144,106 @@ Once the VMs boot RHCOS will be installed and nodes will automatically start con
 Run the following command to ensure the bootstrap process completes (be sure to adjust the `--dir` flag with your working directory):
 
 ```console
-$ ./openshift-install --dir=/home/chris/upi/rhv-upi wait-for bootstrap-complete
-INFO Waiting up to 30m0s for the Kubernetes API at https://api.rhv-upi.ocp.pwc.umbrella.local:6443... 
-INFO API v1.13.4+f2cc675 up                       
+$ openshift-install wait-for bootstrap-complete --dir /tmp/rhv-upi/
+INFO Waiting up to 30m0s for the Kubernetes API at https://api.ocp.ltsai.com:6443... 
+INFO API v1.14.6+dc8862c up                       
 INFO Waiting up to 30m0s for bootstrapping to complete... 
-INFO It is now safe to remove the bootstrap resources
+INFO It is now safe to remove the bootstrap resources 
+```
+
+From the boostrap node:
+```console
+[core@bootstrap ~]$ journalctl -b -f -u bootkube.service
+Nov 26 10:56:52 bootstrap.ocp.ltsai.com bootkube.sh[3494]: Tearing down temporary bootstrap control plane...
+Nov 26 10:56:53 bootstrap.ocp.ltsai.com bootkube.sh[3494]: bootkube.service complete
 ```
 
 Once this openshift-install command completes successfully, login to the load balancer and comment out the references to the bootstrap server in `/etc/haproxy/haproxy.cfg`. There should be two references, one in the backend configuration `backend_22623` and one in the backend configuration `backend_6443`. Alternativaly, you can just run this utility playbook to achieve the same:
 
 ```console
-ansible-playbook -i inventory.yml bootstrap_cleanup.yml
+ansible-playbook -i inventory.yml -u root bootstrap_cleanup.yml
 ```
 
-Lastly, refer to the baremetal UPI documentation and complete [Logging into the cluster](https://docs.openshift.com/container-platform/4.1/installing/installing_bare_metal/installing-bare-metal.html#cli-logging-in-kubeadmin_installing-bare-metal) and all remaining steps.
+Or you can simply power off the bootstrap vm. Regardless, the bootstrap services would have been shutdown. 
+
+### Kubeconfig
+
+To use `oc` command, copy the kubeconfig to your local system.
+
+```console
+cp /rhv-upi/auth/kubeconfig  ~/.kube/config
+```
+
+### Wait for installation to complete
+
+Next, wait for the installation to complete
+
+To complete the installation, you will need to define the [registry storage](https://docs.openshift.com/container-platform/4.2/installing/installing_bare_metal/installing-bare-metal.html#installation-registry-storage-config_installing-bare-metal), otherwise the image-registry cluster operator will be pending. 
+
+This configure `emptydir` which is *NOT* for production use. 
+``` console
+$ oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+```
+
+
+If you run this command before the Image Registry Operator initializes its components, the oc patch command fails with the following error:
+
+`Error from server (NotFound): configs.imageregistry.operator.openshift.io "cluster" not found`
+
+
+
+```console
+$ openshift-install wait-for install-complete --dir /tmp/rhv-upi/
+INFO Waiting up to 30m0s for the cluster at https://api.ocp.ltsai.com:6443 to initialize... 
+INFO Waiting up to 10m0s for the openshift-console route to be created... 
+INFO Install complete!                            
+INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/tmp/rhv-upi/auth/kubeconfig' 
+INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp.ltsai.com 
+INFO Login to the console with user: kubeadmin, password: XXX
+
+```
+
+Check cluster operators:
+```console
+$ oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE
+authentication                             4.2.4     True        False         False      17m
+cloud-credential                           4.2.4     True        False         False      39m
+cluster-autoscaler                         4.2.4     True        False         False      23m
+console                                    4.2.4     True        False         False      20m
+dns                                        4.2.4     True        False         False      39m
+image-registry                             4.2.4     True        False         False      12m
+ingress                                    4.2.4     True        False         False      27m
+insights                                   4.2.4     True        False         False      39m
+kube-apiserver                             4.2.4     True        False         False      36m
+kube-controller-manager                    4.2.4     True        False         False      36m
+kube-scheduler                             4.2.4     True        False         False      35m
+machine-api                                4.2.4     True        False         False      40m
+machine-config                             4.2.4     True        False         False      30m
+marketplace                                4.2.4     True        False         False      27m
+monitoring                                 4.2.4     True        False         False      10s
+network                                    4.2.4     True        False         False      37m
+node-tuning                                4.2.4     True        False         False      32m
+openshift-apiserver                        4.2.4     True        False         False      31m
+openshift-controller-manager               4.2.4     True        False         False      35m
+openshift-samples                          4.2.4     True        False         False      18m
+operator-lifecycle-manager                 4.2.4     True        False         False      37m
+operator-lifecycle-manager-catalog         4.2.4     True        False         False      37m
+operator-lifecycle-manager-packageserver   4.2.4     True        False         False      50s
+service-ca                                 4.2.4     True        False         False      39m
+service-catalog-apiserver                  4.2.4     True        False         False      33m
+service-catalog-controller-manager         4.2.4     True        False         False      33m
+storage                                    4.2.4     True        False         False      28m
+```
 
 # Retiring
 
-Playbooks are also provided to remove VMs from RHV and DNS entries from IdM. To do this, run the retirement playbook as follows:
+Playbooks are also provided to remove VMs from RHV. To do this, run the retirement playbook as follows:
 
 ```console
 $ ansible-playbook -i inventory.yml --ask-vault-pass retire.yml
 ```
+
+# HAProxy Stats
+
+Accessible from http://<haproxy>:5000/haproxy_stats

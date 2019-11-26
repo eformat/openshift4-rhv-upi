@@ -2,13 +2,12 @@
 all:
   vars:
     provision_group: pg
-    base_domain: ocp.ltsai.com
+    dns_base_domain: ocp.ltsai.com #<cluster_name>.<base_domain>
     rhcos_version: 4.2.0
-    rhcos_arch: x86_64
-    rhcos_kernel: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-installer-kernel"
-    rhcos_initrd: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-installer-initramfs.img"
-    rhcos_image: "rhcos-{{rhcos_version}}-{{rhcos_arch}}-metal-bios.raw.gz"
-    ocp_mirror_path: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
+    rhcos_kernel: "rhcos-{{rhcos_version}}-x86_64-installer-kernel"
+    rhcos_initrd: "rhcos-{{rhcos_version}}-x86_64-installer-initramfs.img"
+    rhcos_image: "rhcos-{{rhcos_version}}-x86_64-metal-bios.raw.gz"
+    rhcos_mirror_path: https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.2/latest/
     dhcp_server_dns_servers: 192.168.0.212
     dhcp_server_gateway: 192.168.100.1
     dhcp_server_subnet_mask: 255.255.255.0
@@ -16,7 +15,9 @@ all:
     dhcp_server_ntp_server: ntp.lab.ltsai.com
     load_balancer_ip: 192.168.0.230
     httpd_port: 8888
-    installation_directory: /root/rhv-upi
+    installation_directory: /tmp/rhv-upi
+
+    # === Disconnected environment settings ===
     restricted_network: true
     ocp_local_registry: ocp4-registry.ocp.ltsai.com:5000
     ocp_local_repo: ocp4/openshift
@@ -54,10 +55,11 @@ all:
       253G4bRSkdLUNONnDuPbjxPAiTkte68KDw5AHKPevtkpTjLD3oUP9l5muHtcdQ0M
       fSOG+UuzsA==
       -----END CERTIFICATE-----
+
   children:
     webserver:
       hosts:
-        ocp4-bastion.ocp.ltsai.com
+        ocp4-bastion.lab.ltsai.com
       vars:
         firewall_zone: internal
       
@@ -73,7 +75,7 @@ all:
 
     loadbalancer:
       hosts:
-        ocp4-bastion.ocp.ltsai.com
+        ocp4-bastion.lab.ltsai.com
       vars:
         firewall_zone: public
     pg:
@@ -184,37 +186,37 @@ all:
           - name: eth0
             network: private
             interface: virtio
-        worker2:
-          ip: 192.168.100.156
-          memory: 6GiB
-          memory_guaranteed: 1GiB
-          sockets: 1
-          cores: 4
-          disks:
-          - name: os
-            bootable: yes
-            size: 80GiB
-            format: cow
-            interface: virtio_scsi
-            storage_domain: b08-data
-          nics:
-          - name: eth0
-            network: private
-            interface: virtio
-        worker3:
-          ip: 192.168.100.157
-          memory: 6GiB
-          memory_guaranteed: 1GiB
-          sockets: 1
-          cores: 4
-          disks:
-          - name: os
-            bootable: yes
-            size: 80GiB
-            format: cow
-            interface: virtio_scsi
-            storage_domain: b02-data
-          nics:
-          - name: eth0
-            network: private
-            interface: virtio
+        # worker2:
+        #   ip: 192.168.100.156
+        #   memory: 6GiB
+        #   memory_guaranteed: 1GiB
+        #   sockets: 1
+        #   cores: 4
+        #   disks:
+        #   - name: os
+        #     bootable: yes
+        #     size: 80GiB
+        #     format: cow
+        #     interface: virtio_scsi
+        #     storage_domain: b08-data
+        #   nics:
+        #   - name: eth0
+        #     network: private
+        #     interface: virtio
+        # worker3:
+        #   ip: 192.168.100.157
+        #   memory: 6GiB
+        #   memory_guaranteed: 1GiB
+        #   sockets: 1
+        #   cores: 4
+        #   disks:
+        #   - name: os
+        #     bootable: yes
+        #     size: 80GiB
+        #     format: cow
+        #     interface: virtio_scsi
+        #     storage_domain: b02-data
+        #   nics:
+        #   - name: eth0
+        #     network: private
+        #     interface: virtio

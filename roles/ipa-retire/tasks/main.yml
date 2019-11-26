@@ -2,9 +2,9 @@
   ipa_dnsrecord:
     name: "_etcd-server-ssl._tcp"
     validate_certs: no
-    zone_name: "{{ base_domain }}"
+    zone_name: "{{ dns_base_domain }}"
     record_type: SRV
-    record_value: "0 10 2380 {{ item }}.{{ base_domain }}."
+    record_value: "0 10 2380 {{ item }}.{{ dns_base_domain }}."
     ipa_host: "{{ ipa_hostname }}"
     ipa_user: "{{ ipa_username }}"
     ipa_pass: "{{ ipa_password }}"
@@ -18,7 +18,7 @@
   ipa_dnsrecord:
     name: "{{ item }}"
     validate_certs: no
-    zone_name: "{{ base_domain }}"
+    zone_name: "{{ dns_base_domain }}"
     record_type: A
     record_value: "{{ hostvars[item].ip }}"
     ipa_host: "{{ ipa_hostname }}"
@@ -34,7 +34,7 @@
     validate_certs: no
     zone_name: "{{ hostvars[item].ip.split('.')[-2] }}.{{ hostvars[item].ip.split('.')[-3] }}.{{ hostvars[item].ip.split('.')[-4] }}.in-addr.arpa."
     record_type: PTR
-    record_value: "{{ item }}.{{ base_domain }}."
+    record_value: "{{ item }}.{{ dns_base_domain }}."
     ipa_host: "{{ ipa_hostname }}"
     ipa_user: "{{ ipa_username }}"
     ipa_pass: "{{ ipa_password }}"
@@ -46,7 +46,7 @@
   ipa_dnsrecord:
     name: "{{ item }}"
     validate_certs: no
-    zone_name: "{{ base_domain }}"
+    zone_name: "{{ dns_base_domain }}"
     record_type: A
     record_value: "{{ load_balancer_ip }}"
     ipa_host: "{{ ipa_hostname }}"
@@ -61,7 +61,7 @@
   ipa_dnsrecord:
     name: "*.apps"
     validate_certs: no
-    zone_name: "{{ base_domain }}"
+    zone_name: "{{ dns_base_domain }}"
     record_type: A
     record_value: "{{ load_balancer_ip }}"
     ipa_host: "{{ ipa_hostname }}"
@@ -73,7 +73,7 @@
   ipa_dnsrecord:
     name: "{{ hostvars[item].etcd_name }}"
     validate_certs: no    
-    zone_name: "{{ base_domain }}"
+    zone_name: "{{ dns_base_domain }}"
     record_type: A
     record_value: "{{ hostvars[item].ip }}"
     ipa_host: "{{ ipa_hostname }}"

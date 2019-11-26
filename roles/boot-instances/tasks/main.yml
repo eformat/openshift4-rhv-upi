@@ -8,20 +8,20 @@
 - name: Startup (install) Bootstrap Node
   ovirt_vm:
     auth: "{{ ovirt_auth }}"
-    name: "bootstrap.{{ base_domain }}"
+    name: "bootstrap.{{ dns_base_domain }}"
     state: running
 
-- name: Wait 30 Minutes for SSH on Bootstrap Node
-  wait_for:
-    host: "{{ hostvars['bootstrap'].ip }}"
-    port: 22
-    sleep: 10
-    timeout: 1800
+# - name: Wait 30 Minutes for SSH on Bootstrap Node
+#   wait_for:
+#     host: "{{ hostvars['bootstrap'].ip }}"
+#     port: 22
+#     sleep: 10
+#     timeout: 1800
 
 - name: Startup (install) Master Nodes
   ovirt_vm:
     auth: "{{ ovirt_auth }}"
-    name: "{{ item }}.{{ base_domain }}"
+    name: "{{ item }}.{{ dns_base_domain }}"
     state: running
   with_items:
     - "{{ groups[provision_group] }}"
@@ -40,7 +40,7 @@
 - name: Startup (install) Worker Nodes
   ovirt_vm:
     auth: "{{ ovirt_auth }}"
-    name: "{{ item }}.{{ base_domain }}"
+    name: "{{ item }}.{{ dns_base_domain }}"
     state: running
   with_items:
     - "{{ groups[provision_group] }}"

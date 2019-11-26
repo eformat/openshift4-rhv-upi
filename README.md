@@ -62,7 +62,7 @@ You will need to install Ansible. This has been tested with Ansible 2.9.1.
 
 ## Create DNS Zones in IdM
 
-Login to your IdM server and make sure a reverse zone is configured for your subnet. My lab has a subnet of `192.168.100.0` so the corresponding reverse zone is called `100.168.192.in-addr.arpa.`. Make sure a forward zone is configured as well. It should be whatever is defined in the `base_domain` variable in your Ansible inventory file (`ocp.ltsai.com` in this example).
+Login to your IdM server and make sure a reverse zone is configured for your subnet. My lab has a subnet of `192.168.100.0` so the corresponding reverse zone is called `100.168.192.in-addr.arpa.`. Make sure a forward zone is configured as well. It should be whatever is defined in the `dns_base_domain` variable in your Ansible inventory file (`ocp.ltsai.com` in this example).
 
 ## Creating Inventory File for Ansible
 

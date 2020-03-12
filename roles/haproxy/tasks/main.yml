@@ -33,7 +33,7 @@
     - 443
     - 6443
     - 22623
-    - 5000
+    - 5005
 
 - name: Enable/Start haproxy Service
   systemd:
